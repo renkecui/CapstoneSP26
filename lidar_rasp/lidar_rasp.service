@@ -1,0 +1,16 @@
+[Unit]
+Description=LD19 LiDAR headless scanner
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=dialout
+WorkingDirectory=/home/pi/Capstone/lidar_rasp
+Environment=LIDAR_PORT=/dev/ttyUSB0
+ExecStart=/usr/bin/python3 /home/pi/Capstone/lidar_rasp/run_lidar_headless.py --log-every 10
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
