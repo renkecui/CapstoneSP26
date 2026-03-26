@@ -1,0 +1,203 @@
+"""
+test_wheels_rosmaster.py
+────────────────────────
+Test script for 4 mechanic wheels using the Rosmaster_Lib library.
+
+Motor layout (top-down view):
+    ┌──────────────────────┐
+    │  Motor 1   Motor 2   │
+    │  (FL)      (FR)      │
+    │                      │
+    │  Motor 3   Motor 4   │
+    │  (RL)      (RR)      │
+    └──────────────────────┘
+
+set_motor(speed_1, speed_2, speed_3, speed_4)
+  • Range  : -100 to 100  (int)
+  • 0      : stop
+  • +value : forward
+  • -value : reverse
+"""
+
+import time
+
+try:
+    from Rosmaster_Lib import Rosmaster
+    HARDWARE_AVAILABLE = True
+except ImportError:
+    HARDWARE_AVAILABLE = False
+    print("[WARN] Rosmaster_Lib not found — running in simulation mode.\n")
+
+
+# ──────────────────────────────────────────────────────────────
+# Simulation stub (used when no real hardware is connected)
+# ──────────────────────────────────────────────────────────────
+
+class RosmasterSim:
+    """Minimal stand-in that prints commands instead of driving motors."""
+
+    def set_motor(self, s1, s2, s3, s4):
+        print(f"  [SIM] set_motor({s1:>5}, {s2:>5}, {s3:>5}, {s4:>5})")
+
+    def create_receive_threading(self):
+        pass  # no-op in simulation
+
+
+# ──────────────────────────────────────────────────────────────
+# Helpers
+# ──────────────────────────────────────────────────────────────
+
+DELAY = 1.5   # seconds each test motion runs before stopping
+
+def get_bot():
+    """Return a real or simulated Rosmaster instance."""
+    if HARDWARE_AVAILABLE:
+        bot = Rosmaster()
+        bot.create_receive_threading()
+        return bot
+    return RosmasterSim()
+
+
+def stop(bot):
+    bot.set_motor(0, 0, 0, 0)
+
+
+def section(title: str):
+    print(f"\n{'─'*50}")
+    print(f"  {title}")
+    print(f"{'─'*50}")
+
+
+# ──────────────────────────────────────────────────────────────
+# Individual wheel tests
+# ──────────────────────────────────────────────────────────────
+
+def test_individual_wheels(bot):
+    """Spin each wheel one at a time to verify independence."""
+    section("TEST 1 — Individual Wheel Check")
+
+    wheels = [
+        ("Motor 1 — Front Left",  (50,  0,  0,  0)),
+        ("Motor 2 — Front Right", ( 0, 50,  0,  0)),
+        ("Motor 3 — Rear Left",   ( 0,  0, 50,  0)),
+        ("Motor 4 — Rear Right",  ( 0,  0,  0, 50)),
+    ]
+
+    for name, speeds in wheels:
+        print(f"\n  ▶ {name}")
+        bot.set_motor(*speeds)
+        time.sleep(DELAY)
+        stop(bot)
+        time.sleep(0.5)
+
+    print("\n  ✓ Individual wheel test complete.")
+
+
+# ──────────────────────────────────────────────────────────────
+# Directional motion tests
+# ──────────────────────────────────────────────────────────────
+
+def test_forward(bot):
+    section("TEST 2 — Forward Motion")
+    print("  All wheels forward at speed 60 …")
+    bot.set_motor(60, 60, 60, 60)
+    time.sleep(DELAY)
+    stop(bot)
+    print("  ✓ Forward test complete.")
+
+
+def test_reverse(bot):
+    section("TEST 3 — Reverse Motion")
+    print("  All wheels reverse at speed -60 …")
+    bot.set_motor(-60, -60, -60, -60)
+    time.sleep(DELAY)
+    stop(bot)
+    print("  ✓ Reverse test complete.")
+
+
+def test_turn_left(bot):
+    section("TEST 4 — Turn Left (spin in place)")
+    print("  Left wheels backward, right wheels forward …")
+    bot.set_motor(-50, 50, -50, 50)
+    time.sleep(DELAY)
+    stop(bot)
+    print("  ✓ Left turn test complete.")
+
+
+def test_turn_right(bot):
+    section("TEST 5 — Turn Right (spin in place)")
+    print("  Left wheels forward, right wheels backward …")
+    bot.set_motor(50, -50, 50, -50)
+    time.sleep(DELAY)
+    stop(bot)
+    print("  ✓ Right turn test complete.")
+
+
+# ──────────────────────────────────────────────────────────────
+# Speed ramp test
+# ──────────────────────────────────────────────────────────────
+
+def test_speed_ramp(bot):
+    section("TEST 6 — Speed Ramp (0 → 100 → 0)")
+    print("  Gradually increasing then decreasing speed …")
+
+    for speed in range(0, 101, 10):
+        print(f"    Speed: {speed:>3}")
+        bot.set_motor(speed, speed, speed, speed)
+        time.sleep(0.2)
+
+    for speed in range(100, -1, -10):
+        print(f"    Speed: {speed:>3}")
+        bot.set_motor(speed, speed, speed, speed)
+        time.sleep(0.2)
+
+    stop(bot)
+    print("  ✓ Ramp test complete.")
+
+
+# ──────────────────────────────────────────────────────────────
+# Emergency stop test
+# ──────────────────────────────────────────────────────────────
+
+def test_emergency_stop(bot):
+    section("TEST 7 — Emergency Stop")
+    print("  Running at full speed then hard stop …")
+    bot.set_motor(100, 100, 100, 100)
+    time.sleep(0.5)
+    stop(bot)
+    print("  ✓ Emergency stop test complete.")
+
+
+# ──────────────────────────────────────────────────────────────
+# Main runner
+# ──────────────────────────────────────────────────────────────
+
+def run_all_tests():
+    mode = "HARDWARE" if HARDWARE_AVAILABLE else "SIMULATION"
+    print(f"\n{'═'*50}")
+    print(f"  Rosmaster Wheel Test Suite  [{mode}]")
+    print(f"{'═'*50}")
+
+    bot = get_bot()
+
+    try:
+        test_individual_wheels(bot)
+        test_forward(bot)
+        test_reverse(bot)
+        test_turn_left(bot)
+        test_turn_right(bot)
+        test_speed_ramp(bot)
+        test_emergency_stop(bot)
+
+    except KeyboardInterrupt:
+        print("\n\n  [!] Interrupted by user.")
+
+    finally:
+        stop(bot)
+        print(f"\n{'═'*50}")
+        print("  All tests finished. Motors stopped.")
+        print(f"{'═'*50}\n")
+
+
+if __name__ == "__main__":
+    run_all_tests()

@@ -1,0 +1,26 @@
+import RPi.GPIO as GPIO
+import time
+
+# Pin setup
+IR_PIN = 17
+LED_PIN = 27
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(IR_PIN, GPIO.IN)
+GPIO.setup(LED_PIN, GPIO.OUT)
+
+print("IR sensor ready...")
+
+try:
+    while True:
+        if GPIO.input(IR_PIN) == 0:  # Object detected
+            print("Object detected!")
+            GPIO.output(LED_PIN, GPIO.HIGH)  # LED on
+        else:
+            print("No object")
+            GPIO.output(LED_PIN, GPIO.LOW)   # LED off
+        time.sleep(0.1)
+
+except KeyboardInterrupt:
+    print("Stopping...")
+    GPIO.cleanup()
